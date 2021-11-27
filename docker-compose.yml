@@ -1,0 +1,112 @@
+version: "3.7"
+services:
+  loadbalancer:
+    build: loadbalancer
+    container_name: loadbalancer
+    ports:
+      - 8080:80
+    networks:
+      cluster:
+        aliases:
+          - localhost
+  database:
+    image: postgres:11.14
+    container_name: database
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=jira
+      - POSTGRES_USER=jira
+      - POSTGRES_DB=jira
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - cluster
+  pgadmin:
+    image: dpage/pgadmin4:6.2
+    container_name: pgadmin
+    ports:
+      - 5050:80
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=support@adaptavist.com
+      - PGADMIN_DEFAULT_PASSWORD=jira
+      - PGADMIN_LISTEN_PORT=80
+    networks:
+      - cluster
+  node1:
+    build: jira-software
+    container_name: node1
+    ports:
+      - 8081:8080
+    environment:
+      # Memory / Heap Size
+      - JVM_MINIMUM_MEMORY=512M
+      - JVM_MAXIMUM_MEMORY=2048M
+      # Reverse Proxy Settings
+      - ATL_PROXY_NAME=localhost
+      - ATL_PROXY_PORT=8080
+      # Database
+      - ATL_JDBC_URL=jdbc:postgresql://host.docker.internal:5432/jira
+      - ATL_JDBC_USER=jira
+      - ATL_JDBC_PASSWORD=jira
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgres72
+      # Data Center configuration
+      - CLUSTERED=true
+      - JIRA_NODE_ID=node1
+      - EHCACHE_LISTENER_HOSTNAME=node1
+      - EHCACHE_LISTENER_PORT=40001
+      - EHCACHE_OBJECT_PORT=40011
+      - EHCACHE_PEER_DISCOVERY=default
+      # Home Directories
+      - JIRA_HOME=/var/atlassian/application-data/jira
+      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
+    volumes:
+      - shared:/var/atlassian/application-data/shared
+    depends_on:
+      - database
+    networks:
+      - cluster
+  node2:
+    build: jira-software
+    container_name: node2
+    ports:
+      - 8082:8080
+    environment:
+      # Memory / Heap Size
+      - JVM_MINIMUM_MEMORY=512M
+      - JVM_MAXIMUM_MEMORY=2048M
+      # Reverse Proxy Settings
+      - ATL_PROXY_NAME=localhost
+      - ATL_PROXY_PORT=8080
+      # Database
+      - ATL_JDBC_URL=jdbc:postgresql://host.docker.internal:5432/jira
+      - ATL_JDBC_USER=jira
+      - ATL_JDBC_PASSWORD=jira
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgres72
+      # Data Center configuration
+      - CLUSTERED=true
+      - JIRA_NODE_ID=node2
+      - EHCACHE_LISTENER_HOSTNAME=node2
+      # FIX: LISTENER PORT MUST BE DIFFERENT FOR EVERY NODE! https://developer.atlassian.com/server/jira/platform/configuring-a-jira-cluster/
+      - EHCACHE_LISTENER_PORT=40002
+      - EHCACHE_OBJECT_PORT=40012
+      # FIX END -----
+      - EHCACHE_PEER_DISCOVERY=default
+      # Home Directories
+      - JIRA_HOME=/var/atlassian/application-data/jira
+      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
+    volumes:
+      - shared:/var/atlassian/application-data/shared
+    depends_on:
+      - database
+    networks:
+      - cluster
+volumes:
+  db_data:
+  shared:
+networks:
+  cluster:
+    driver: bridge
