@@ -1,35 +1,19 @@
 version: "3.7"
 services:
-  # bitbucket-nfs:
-  #   image: erichough/nfs-server:2.2.1
-  #   container_name: bitbucket-nfs
-  #   volumes:
-  #     - bitbucket-nfs:/var/bitbucket-nfs
-  #     - /lib/modules:/lib/modules:ro
-  #   environment:
-  #     - NFS_EXPORT_0=/var/bitbucket-nfs *(rw,async,no_subtree_check,no_all_squash)
-  #   cap_add:
-  #     - SYS_ADMIN
-  #     - SYS_MODULE
-  #   ports:
-  #     - 2049:2049
-  #   networks:
-  #     bitbucket-cluster:
-  #       ipv4_address: 10.0.0.10
   bitbucket-loadbalancer:
     build: haproxy
-    container_name: bitbucket-loadbalancer
+    container_name: bblb
     ports:
       - 7990:80
       - 7999:7999
     networks:
-      bitbucket-cluster:
+      cluster:
         ipv4_address: 10.0.0.5
         aliases:
           - localhost
   bitbucket-database:
     image: postgres:11.14
-    container_name: bitbucket-database
+    container_name: bbdb
     ports:
       - 5433:5432
     environment:
@@ -38,13 +22,13 @@ services:
       - POSTGRES_DB=bitbucket
       - PGDATA=/var/lib/postgresql/data
     volumes:
-      - bitbucket-database:/var/lib/postgresql/data
+      - database:/var/lib/postgresql/data
     networks:
-      bitbucket-cluster:
+      cluster:
         ipv4_address: 10.0.0.6
   bitbucket-pgadmin:
     image: dpage/pgadmin4:6.2
-    container_name: bitbucket-pgadmin
+    container_name: bbpgadmin
     ports:
       - 5051:80
     environment:
@@ -52,11 +36,11 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=bitbucket
       - PGADMIN_LISTEN_PORT=80
     networks:
-      bitbucket-cluster:
+      cluster:
         ipv4_address: 10.0.0.7
   bitbucket-node1:
-    image: atlassian/bitbucket:7.19.2
-    container_name: bitbucket-node1
+    build: bitbucket
+    container_name: bb1
     ports:
       - 7991:7990
       - 7998:7999
@@ -67,6 +51,8 @@ services:
       # Reverse Proxy Settings
       - SERVER_PROXY_NAME=localhost
       - SERVER_PROXY_PORT=7990
+      # Application Mode Settings
+      - ELASTICSEARCH_ENABLED=false
       # Database
       - JDBC_URL=jdbc:postgresql://10.0.0.6:5432/bitbucket
       - JDBC_USER=bitbucket
@@ -83,15 +69,15 @@ services:
       - BITBUCKET_HOME=/var/atlassian/application-data/bitbucket
       - BITBUCKET_SHARED_HOME=/var/atlassian/application-data/bitbucket/shared
     volumes:
-      - bitbucket-shared:/var/atlassian/application-data/bitbucket/shared
+      - shared:/var/atlassian/application-data/bitbucket/shared
     depends_on:
-      - bitbucket-database
+      - bbdb
     networks:
-      bitbucket-cluster:
+      cluster:
         ipv4_address: 10.0.0.8
   bitbucket-node2:
-    image: atlassian/bitbucket:7.19.2
-    container_name: bitbucket-node2
+    build: bitbucket
+    container_name: bb2
     ports:
       - 7992:7990
       - 7997:7999
@@ -102,6 +88,8 @@ services:
       # Reverse Proxy Settings
       - SERVER_PROXY_NAME=localhost
       - SERVER_PROXY_PORT=7990
+      # Application Mode Settings
+      - ELASTICSEARCH_ENABLED=false
       # Database
       - JDBC_URL=jdbc:postgresql://10.0.0.6:5432/bitbucket
       - JDBC_USER=bitbucket
@@ -118,27 +106,19 @@ services:
       - BITBUCKET_HOME=/var/atlassian/application-data/bitbucket
       - BITBUCKET_SHARED_HOME=/var/atlassian/application-data/bitbucket/shared
     volumes:
-      - bitbucket-shared:/var/atlassian/application-data/bitbucket/shared
+      - shared:/var/atlassian/application-data/bitbucket/shared
     depends_on:
-      - bitbucket-database
+      - bbdb
     networks:
-      bitbucket-cluster:
+      cluster:
         ipv4_address: 10.0.0.9
 volumes:
-  bitbucket-database:
-  # bitbucket-nfs:
-  bitbucket-shared:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: nfsvers=3,addr=20.0.0.10,nolock,soft,rw
-      device: ":/var/bitbucket-nfs"
+  database:
+  shared:
 networks:
-  bitbucket-cluster:
+  cluster:
     driver: bridge
     ipam:
       driver: default
       config:
         - subnet: 10.0.0.0/24
-  nfs-network:
-    external: true
