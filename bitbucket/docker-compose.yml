@@ -1,0 +1,144 @@
+version: "3.7"
+services:
+  # bitbucket-nfs:
+  #   image: erichough/nfs-server:2.2.1
+  #   container_name: bitbucket-nfs
+  #   volumes:
+  #     - bitbucket-nfs:/var/bitbucket-nfs
+  #     - /lib/modules:/lib/modules:ro
+  #   environment:
+  #     - NFS_EXPORT_0=/var/bitbucket-nfs *(rw,async,no_subtree_check,no_all_squash)
+  #   cap_add:
+  #     - SYS_ADMIN
+  #     - SYS_MODULE
+  #   ports:
+  #     - 2049:2049
+  #   networks:
+  #     bitbucket-cluster:
+  #       ipv4_address: 10.0.0.10
+  bitbucket-loadbalancer:
+    build: haproxy
+    container_name: bitbucket-loadbalancer
+    ports:
+      - 7990:80
+      - 7999:7999
+    networks:
+      bitbucket-cluster:
+        ipv4_address: 10.0.0.5
+        aliases:
+          - localhost
+  bitbucket-database:
+    image: postgres:11.14
+    container_name: bitbucket-database
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_PASSWORD=bitbucket
+      - POSTGRES_USER=bitbucket
+      - POSTGRES_DB=bitbucket
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - bitbucket-database:/var/lib/postgresql/data
+    networks:
+      bitbucket-cluster:
+        ipv4_address: 10.0.0.6
+  bitbucket-pgadmin:
+    image: dpage/pgadmin4:6.2
+    container_name: bitbucket-pgadmin
+    ports:
+      - 5051:80
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=support@adaptavist.com
+      - PGADMIN_DEFAULT_PASSWORD=bitbucket
+      - PGADMIN_LISTEN_PORT=80
+    networks:
+      bitbucket-cluster:
+        ipv4_address: 10.0.0.7
+  bitbucket-node1:
+    image: atlassian/bitbucket:7.19.2
+    container_name: bitbucket-node1
+    ports:
+      - 7991:7990
+      - 7998:7999
+    environment:
+      # Memory / Heap Size
+      - JVM_MINIMUM_MEMORY=512M
+      - JVM_MAXIMUM_MEMORY=2048M
+      # Reverse Proxy Settings
+      - SERVER_PROXY_NAME=localhost
+      - SERVER_PROXY_PORT=7990
+      # Database
+      - JDBC_URL=jdbc:postgresql://10.0.0.6:5432/bitbucket
+      - JDBC_USER=bitbucket
+      - JDBC_PASSWORD=bitbucket
+      - JDBC_DRIVER=org.postgresql.Driver
+      # Data Center configuration
+      - HAZELCAST_NETWORK_MULTICAST=true
+      - HAZELCAST_PORT=5701
+      - HAZELCAST_GROUP_NAME=bitbucket
+      - HAZELCAST_GROUP_PASSWORD=bitbucket
+        # - HAZELCAST_NETWORK_TCPIP=true
+        # - HAZELCAST_NETWORK_TCPIP_MEMEBERS=10.0.0.8:5701,10.0.0.9:5701
+      # Home Directories
+      - BITBUCKET_HOME=/var/atlassian/application-data/bitbucket
+      - BITBUCKET_SHARED_HOME=/var/atlassian/application-data/bitbucket/shared
+    volumes:
+      - bitbucket-shared:/var/atlassian/application-data/bitbucket/shared
+    depends_on:
+      - bitbucket-database
+    networks:
+      bitbucket-cluster:
+        ipv4_address: 10.0.0.8
+  bitbucket-node2:
+    image: atlassian/bitbucket:7.19.2
+    container_name: bitbucket-node2
+    ports:
+      - 7992:7990
+      - 7997:7999
+    environment:
+      # Memory / Heap Size
+      - JVM_MINIMUM_MEMORY=512M
+      - JVM_MAXIMUM_MEMORY=2048M
+      # Reverse Proxy Settings
+      - SERVER_PROXY_NAME=localhost
+      - SERVER_PROXY_PORT=7990
+      # Database
+      - JDBC_URL=jdbc:postgresql://10.0.0.6:5432/bitbucket
+      - JDBC_USER=bitbucket
+      - JDBC_PASSWORD=bitbucket
+      - JDBC_DRIVER=org.postgresql.Driver
+      # Data Center configuration
+      - HAZELCAST_NETWORK_MULTICAST=true
+      - HAZELCAST_PORT=5701
+      - HAZELCAST_GROUP_NAME=bitbucket
+      - HAZELCAST_GROUP_PASSWORD=bitbucket
+        # - HAZELCAST_NETWORK_TCPIP=true
+        # - HAZELCAST_NETWORK_TCPIP_MEMEBERS=10.0.0.8:5701,10.0.0.9:5701
+      # Home Directories
+      - BITBUCKET_HOME=/var/atlassian/application-data/bitbucket
+      - BITBUCKET_SHARED_HOME=/var/atlassian/application-data/bitbucket/shared
+    volumes:
+      - bitbucket-shared:/var/atlassian/application-data/bitbucket/shared
+    depends_on:
+      - bitbucket-database
+    networks:
+      bitbucket-cluster:
+        ipv4_address: 10.0.0.9
+volumes:
+  bitbucket-database:
+  # bitbucket-nfs:
+  bitbucket-shared:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: nfsvers=3,addr=20.0.0.10,nolock,soft,rw
+      device: ":/var/bitbucket-nfs"
+networks:
+  bitbucket-cluster:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.0.0/24
+  nfs-network:
+    external: true

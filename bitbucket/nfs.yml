@@ -1,0 +1,27 @@
+version: "3.7"
+services:
+  bitbucket-nfs:
+    image: erichough/nfs-server:2.2.1
+    container_name: bitbucket-nfs
+    volumes:
+      - bitbucket-nfs:/var/bitbucket-nfs
+      - /lib/modules:/lib/modules:ro
+    environment:
+      - NFS_EXPORT_0=/var/bitbucket-nfs *(rw,async,no_subtree_check,no_all_squash)
+    cap_add:
+      - SYS_ADMIN
+      - SYS_MODULE
+    ports:
+      - 2049:2049
+    networks:
+      nfs-network:
+        ipv4_address: 20.0.0.10
+volumes:
+  bitbucket-nfs:
+networks:
+  nfs-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 20.0.0.0/24
