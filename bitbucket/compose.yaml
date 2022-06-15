@@ -1,19 +1,24 @@
-version: "3.7"
 services:
-  bitbucket-loadbalancer:
-    build: haproxy
-    container_name: bblb
+  loadbalancer:
+    build:
+      context: .
+      dockerfile: haproxy.Dockerfile
+      args:
+        HAPROXY_IMAGE: haproxy:2.2.20
+    container_name: bb_loadbalancer
     ports:
       - 7990:80
       - 7999:7999
     networks:
       cluster:
-        ipv4_address: 10.0.0.5
         aliases:
           - localhost
-  bitbucket-database:
+    depends_on:
+      - node1
+      - node2
+  database:
     image: postgres:11.14
-    container_name: bbdb
+    container_name: bb_database
     ports:
       - 5433:5432
     environment:
@@ -24,23 +29,26 @@ services:
     volumes:
       - database:/var/lib/postgresql/data
     networks:
-      cluster:
-        ipv4_address: 10.0.0.6
-  bitbucket-pgadmin:
+      - cluster
+  pgadmin:
     image: dpage/pgadmin4:6.2
-    container_name: bbpgadmin
+    container_name: bb_pgadmin
     ports:
       - 5051:80
     environment:
-      - PGADMIN_DEFAULT_EMAIL=support@adaptavist.com
+      - PGADMIN_DEFAULT_EMAIL=bitbucket@example.com
       - PGADMIN_DEFAULT_PASSWORD=bitbucket
       - PGADMIN_LISTEN_PORT=80
     networks:
-      cluster:
-        ipv4_address: 10.0.0.7
-  bitbucket-node1:
+      - cluster
+  node1:
     build: bitbucket
-    container_name: bb1
+    build:
+      context: .
+      dockerfile: bitbucket.Dockerfile
+      args:
+        BITBUCKET_IMAGE: atlassian/bitbucket:7.19.2
+    container_name: bb_node1
     ports:
       - 7991:7990
       - 7998:7999
@@ -54,7 +62,7 @@ services:
       # Application Mode Settings
       - ELASTICSEARCH_ENABLED=false
       # Database
-      - JDBC_URL=jdbc:postgresql://10.0.0.6:5432/bitbucket
+      - JDBC_URL=jdbc:postgresql://database:5432/bitbucket
       - JDBC_USER=bitbucket
       - JDBC_PASSWORD=bitbucket
       - JDBC_DRIVER=org.postgresql.Driver
@@ -71,13 +79,17 @@ services:
     volumes:
       - shared:/var/atlassian/application-data/bitbucket/shared
     depends_on:
-      - bbdb
+      - database
     networks:
-      cluster:
-        ipv4_address: 10.0.0.8
-  bitbucket-node2:
+      - cluster
+  node2:
     build: bitbucket
-    container_name: bb2
+    build:
+      context: .
+      dockerfile: bitbucket.Dockerfile
+      args:
+        BITBUCKET_IMAGE: atlassian/bitbucket:7.19.2
+    container_name: bb_node2
     ports:
       - 7992:7990
       - 7997:7999
@@ -91,7 +103,7 @@ services:
       # Application Mode Settings
       - ELASTICSEARCH_ENABLED=false
       # Database
-      - JDBC_URL=jdbc:postgresql://10.0.0.6:5432/bitbucket
+      - JDBC_URL=jdbc:postgresql://database:5432/bitbucket
       - JDBC_USER=bitbucket
       - JDBC_PASSWORD=bitbucket
       - JDBC_DRIVER=org.postgresql.Driver
@@ -108,17 +120,11 @@ services:
     volumes:
       - shared:/var/atlassian/application-data/bitbucket/shared
     depends_on:
-      - bbdb
+      - database
     networks:
-      cluster:
-        ipv4_address: 10.0.0.9
+      - cluster
 volumes:
   database:
   shared:
 networks:
   cluster:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.0.0.0/24

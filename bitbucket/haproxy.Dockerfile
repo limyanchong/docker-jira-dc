@@ -1,3 +1,4 @@
-FROM haproxy:2.2.20
+ARG HAPROXY_IMAGE
+FROM $HAPROXY_IMAGE
 
 COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
