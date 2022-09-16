@@ -76,6 +76,7 @@ services:
       # Home Directories
       - BITBUCKET_HOME=/var/atlassian/application-data/bitbucket
       - BITBUCKET_SHARED_HOME=/var/atlassian/application-data/bitbucket/shared
+      - PLUGIN_RESOURCE_DIRECTORIES=/var/atlassian/application-data/bitbucket/scripts
     volumes:
       - shared:/var/atlassian/application-data/bitbucket/shared
     depends_on:
@@ -117,6 +118,7 @@ services:
       # Home Directories
       - BITBUCKET_HOME=/var/atlassian/application-data/bitbucket
       - BITBUCKET_SHARED_HOME=/var/atlassian/application-data/bitbucket/shared
+      - PLUGIN_RESOURCE_DIRECTORIES=/var/atlassian/application-data/bitbucket/scripts
     volumes:
       - shared:/var/atlassian/application-data/bitbucket/shared
     depends_on:
