@@ -17,7 +17,7 @@ services:
       - node1
       - node2
   database:
-    image: postgres:11.14
+    image: postgres:11.22
     container_name: bb_database
     ports:
       - 5433:5432
@@ -47,7 +47,7 @@ services:
       context: .
       dockerfile: bitbucket.Dockerfile
       args:
-        BITBUCKET_IMAGE: atlassian/bitbucket:7.19.2
+        BITBUCKET_IMAGE: atlassian/bitbucket:8.9.7
     container_name: bb_node1
     ports:
       - 7991:7990
@@ -88,7 +88,7 @@ services:
       context: .
       dockerfile: bitbucket.Dockerfile
       args:
-        BITBUCKET_IMAGE: atlassian/bitbucket:7.19.2
+        BITBUCKET_IMAGE: atlassian/bitbucket:8.9.7
     container_name: bb_node2
     ports:
       - 7992:7990
