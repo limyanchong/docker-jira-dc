@@ -1,4 +1,6 @@
-import com.atlassian.jira.component.ComponentAccessor
+import com.onresolve.scriptrunner.runner.customisers.WithPlugin
+import com.mlim.plugin.Globals
+@WithPlugin('com.mlim.plugin')
 
-def issue = ComponentAccessor.issueManager.getIssueByCurrentKey("SS-3")
-log.warn "This is a test log from console"
+def doesnotmatter
+log.warn "from behaviour: " + Globals.issue

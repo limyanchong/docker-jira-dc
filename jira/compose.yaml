@@ -6,6 +6,8 @@ services:
       args:
         HAPROXY_IMAGE: ${HAPROXY_IMAGE}
     container_name: jira_loadbalancer
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=0
     ports:
       - 8080:80
       - 9090:9090
@@ -16,6 +18,8 @@ services:
     depends_on:
       - node1
       - node2
+      - node3
+      - node4
   database:
     image: ${POSTGRES_IMAGE}
     container_name: jira_database
@@ -59,7 +63,8 @@ services:
       - 8001:8000
     environment:
       # Setup for debugger
-      - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
+      # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
+      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
       # Reverse Proxy Settings
       - ATL_PROXY_NAME=localhost
       - ATL_PROXY_PORT=8080
@@ -96,7 +101,8 @@ services:
       - 8002:8000
     environment:
       # Setup for debugger
-      - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
+      # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
+      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
       # Reverse Proxy Settings
       - ATL_PROXY_NAME=localhost
       - ATL_PROXY_PORT=8080
@@ -121,10 +127,88 @@ services:
         condition: service_healthy
     networks:
       - cluster
+  node3:
+    build:
+      context: .
+      dockerfile: jira.Dockerfile
+      args:
+        JIRA_IMAGE: ${JIRA_IMAGE}
+    container_name: jira_node3
+    ports:
+      - 8083:8080
+      - 8003:8000
+    environment:
+      # Setup for debugger
+      # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
+      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
+      # Reverse Proxy Settings
+      - ATL_PROXY_NAME=localhost
+      - ATL_PROXY_PORT=8080
+      # Database
+      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
+      - ATL_JDBC_USER=jira
+      - ATL_JDBC_PASSWORD=jira
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgres72
+      # Data Center configuration
+      - CLUSTERED=true
+      - JIRA_NODE_ID=jira3
+      # Home Directories
+      - JIRA_HOME=/var/atlassian/application-data/jira
+      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
+    volumes:
+      - node3:/var/atlassian/application-data/jira
+      - shared:/var/atlassian/application-data/shared
+      - ./scripts:/var/atlassian/application-data/shared/scripts
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - cluster
+  node4:
+    build:
+      context: .
+      dockerfile: jira.Dockerfile
+      args:
+        JIRA_IMAGE: ${JIRA_IMAGE}
+    container_name: jira_node4
+    ports:
+      - 8084:8080
+      - 8004:8000
+    environment:
+      # Setup for debugger
+      # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
+      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
+      # Reverse Proxy Settings
+      - ATL_PROXY_NAME=localhost
+      - ATL_PROXY_PORT=8080
+      # Database
+      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
+      - ATL_JDBC_USER=jira
+      - ATL_JDBC_PASSWORD=jira
+      - ATL_DB_DRIVER=org.postgresql.Driver
+      - ATL_DB_TYPE=postgres72
+      # Data Center configuration
+      - CLUSTERED=true
+      - JIRA_NODE_ID=jira4
+      # Home Directories
+      - JIRA_HOME=/var/atlassian/application-data/jira
+      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
+    volumes:
+      - node4:/var/atlassian/application-data/jira
+      - shared:/var/atlassian/application-data/shared
+      - ./scripts:/var/atlassian/application-data/shared/scripts
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - cluster
 volumes:
   database:
   node1:
   node2:
+  node3:
+  node4:
   shared:
 networks:
   cluster:
