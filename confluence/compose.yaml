@@ -9,7 +9,7 @@ services:
     sysctls:
       - net.ipv4.ip_unprivileged_port_start=0
     ports:
-      - 8080:80
+      - 8090:80
       - 9090:9090
     networks:
       cluster:
@@ -24,13 +24,13 @@ services:
 #      - node4
   database:
     image: ${POSTGRES_IMAGE}
-    container_name: jira_database
+    container_name: confluence_database
     ports:
       - 5432:5432
     environment:
-      - POSTGRES_PASSWORD=jira
-      - POSTGRES_USER=jira
-      - POSTGRES_DB=jira
+      - POSTGRES_PASSWORD=confluence
+      - POSTGRES_USER=confluence
+      - POSTGRES_DB=confluence
       - PGDATA=/var/lib/postgresql/data
     volumes:
       - database:/var/lib/postgresql/data
@@ -44,91 +44,93 @@ services:
       - cluster
   pgadmin:
     image: ${PGADMIN_IMAGE}
-    container_name: jira_pgadmin
+    container_name: confluence_pgadmin
     ports:
       - 5050:80
     environment:
-      - PGADMIN_DEFAULT_EMAIL=jira@example.com
-      - PGADMIN_DEFAULT_PASSWORD=jira
+      - PGADMIN_DEFAULT_EMAIL=confluence@example.com
+      - PGADMIN_DEFAULT_PASSWORD=confluence
       - PGADMIN_LISTEN_PORT=80
     networks:
       - cluster
   node1:
     build:
       context: .
-      dockerfile: jira.Dockerfile
+      dockerfile: confluence.Dockerfile
       args:
-        JIRA_IMAGE: ${JIRA_IMAGE}
-    container_name: jira_node1
+        CONFLUENCE_IMAGE: ${CONFLUENCE_IMAGE}
+    container_name: confluence_node1
     ports:
-      - 8081:8080
-      - 8001:8000
+      - 8190:8090
+      - 8191:8091
     environment:
       # Setup for debugger
       # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
-      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
+      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true"
       # Reverse Proxy Settings
       - ATL_PROXY_NAME=localhost
-      - ATL_PROXY_PORT=8080
+      - ATL_PROXY_PORT=8090
       # Database
-      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
-      - ATL_JDBC_USER=jira
-      - ATL_JDBC_PASSWORD=jira
+      - ATL_JDBC_URL=jdbc:postgresql://database:5432/confluence
+      - ATL_JDBC_USER=confluence
+      - ATL_JDBC_PASSWORD=confluence
       - ATL_DB_DRIVER=org.postgresql.Driver
-      - ATL_DB_TYPE=postgres72
+      - ATL_DB_TYPE=postgresql
       # Data Center configuration
-      - CLUSTERED=true
-      - JIRA_NODE_ID=jira1
+      - ATL_CLUSTER_TYPE=tcp_ip
+      - ATL_CLUSTER_NAME=confluence_cluster
+      - ATL_CLUSTER_PEERS=10.5.0.5,10.5.0.6
       # Home Directories
-      - JIRA_HOME=/var/atlassian/application-data/jira
-      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
+      - CONFLUENCE_HOME=/var/atlassian/application-data/confluence
+      - ATL_PRODUCT_HOME_SHARED=/var/atlassian/application-data/shared
     volumes:
-      - node1:/var/atlassian/application-data/jira
+      - node1:/var/atlassian/application-data/confluence
       - shared:/var/atlassian/application-data/shared
-      - ./scripts:/var/atlassian/application-data/shared/scripts
     depends_on:
       database:
         condition: service_healthy
     networks:
-      - cluster
+      cluster:
+        ipv4_address: 10.5.0.5
   node2:
     build:
       context: .
-      dockerfile: jira.Dockerfile
+      dockerfile: confluence.Dockerfile
       args:
-        JIRA_IMAGE: ${JIRA_IMAGE}
-    container_name: jira_node2
+        CONFLUENCE_IMAGE: ${CONFLUENCE_IMAGE}
+    container_name: confluence_node2
     ports:
-      - 8082:8080
-      - 8002:8000
+      - 8290:8090
+      - 8291:8091
     environment:
       # Setup for debugger
       # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
-      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
+      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true"
       # Reverse Proxy Settings
       - ATL_PROXY_NAME=localhost
-      - ATL_PROXY_PORT=8080
+      - ATL_PROXY_PORT=8090
       # Database
-      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
-      - ATL_JDBC_USER=jira
-      - ATL_JDBC_PASSWORD=jira
+      - ATL_JDBC_URL=jdbc:postgresql://database:5432/confluence
+      - ATL_JDBC_USER=confluence
+      - ATL_JDBC_PASSWORD=confluence
       - ATL_DB_DRIVER=org.postgresql.Driver
-      - ATL_DB_TYPE=postgres72
+      - ATL_DB_TYPE=postgresql
       # Data Center configuration
-      - CLUSTERED=true
-      - JIRA_NODE_ID=jira2
+      - ATL_CLUSTER_TYPE=tcp_ip
+      - ATL_CLUSTER_NAME=confluence_cluster
+      - ATL_CLUSTER_PEERS=10.5.0.5,10.5.0.6
       # Home Directories
-      - JIRA_HOME=/var/atlassian/application-data/jira
-      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
+      - CONFLUENCE_HOME=/var/atlassian/application-data/confluence
+      - ATL_PRODUCT_HOME_SHARED=/var/atlassian/application-data/shared
     volumes:
-      - node2:/var/atlassian/application-data/jira
+      - node2:/var/atlassian/application-data/confluence
       - shared:/var/atlassian/application-data/shared
-      - ./scripts:/var/atlassian/application-data/shared/scripts
     depends_on:
       database:
         condition: service_healthy
     networks:
-      - cluster
+      cluster:
+        ipv4_address: 10.5.0.6
 #  node3:
 #    build:
 #      context: .
@@ -214,3 +216,8 @@ volumes:
   shared:
 networks:
   cluster:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+          gateway: 10.5.0.1
