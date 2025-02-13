@@ -5,7 +5,7 @@ services:
       dockerfile: haproxy.Dockerfile
       args:
         HAPROXY_IMAGE: ${HAPROXY_IMAGE}
-    container_name: jira_loadbalancer
+    container_name: confluence_loadbalancer
     sysctls:
       - net.ipv4.ip_unprivileged_port_start=0
     ports:
@@ -15,6 +15,7 @@ services:
       cluster:
         aliases:
           - localhost
+        ipv4_address: 172.28.0.2
     depends_on:
       - node1
       - node2
@@ -41,7 +42,8 @@ services:
       timeout: 10s
       retries: 10
     networks:
-      - cluster
+      cluster:
+        ipv4_address: 172.28.0.3
   pgadmin:
     image: ${PGADMIN_IMAGE}
     container_name: confluence_pgadmin
@@ -52,7 +54,8 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=confluence
       - PGADMIN_LISTEN_PORT=80
     networks:
-      - cluster
+      cluster:
+        ipv4_address: 172.28.0.4
   node1:
     build:
       context: .
@@ -79,7 +82,8 @@ services:
       # Data Center configuration
       - ATL_CLUSTER_TYPE=tcp_ip
       - ATL_CLUSTER_NAME=confluence_cluster
-      - ATL_CLUSTER_PEERS=10.5.0.5,10.5.0.6
+      - ATL_CLUSTER_PEERS=172.28.0.5,172.28.0.6
+      - ATL_FORCE_CFG_UPDATE=true
       # Home Directories
       - CONFLUENCE_HOME=/var/atlassian/application-data/confluence
       - ATL_PRODUCT_HOME_SHARED=/var/atlassian/application-data/shared
@@ -91,7 +95,7 @@ services:
         condition: service_healthy
     networks:
       cluster:
-        ipv4_address: 10.5.0.5
+        ipv4_address: 172.28.0.5
   node2:
     build:
       context: .
@@ -118,7 +122,8 @@ services:
       # Data Center configuration
       - ATL_CLUSTER_TYPE=tcp_ip
       - ATL_CLUSTER_NAME=confluence_cluster
-      - ATL_CLUSTER_PEERS=10.5.0.5,10.5.0.6
+      - ATL_CLUSTER_PEERS=172.28.0.5,172.28.0.6
+      - ATL_FORCE_CFG_UPDATE=true
       # Home Directories
       - CONFLUENCE_HOME=/var/atlassian/application-data/confluence
       - ATL_PRODUCT_HOME_SHARED=/var/atlassian/application-data/shared
@@ -130,83 +135,7 @@ services:
         condition: service_healthy
     networks:
       cluster:
-        ipv4_address: 10.5.0.6
-#  node3:
-#    build:
-#      context: .
-#      dockerfile: jira.Dockerfile
-#      args:
-#        JIRA_IMAGE: ${JIRA_IMAGE}
-#    container_name: jira_node3
-#    ports:
-#      - 8083:8080
-#      - 8003:8000
-#    environment:
-#      # Setup for debugger
-#      # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
-#      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
-#      # Reverse Proxy Settings
-#      - ATL_PROXY_NAME=localhost
-#      - ATL_PROXY_PORT=8080
-#      # Database
-#      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
-#      - ATL_JDBC_USER=jira
-#      - ATL_JDBC_PASSWORD=jira
-#      - ATL_DB_DRIVER=org.postgresql.Driver
-#      - ATL_DB_TYPE=postgres72
-#      # Data Center configuration
-#      - CLUSTERED=true
-#      - JIRA_NODE_ID=jira3
-#      # Home Directories
-#      - JIRA_HOME=/var/atlassian/application-data/jira
-#      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
-#    volumes:
-#      - node3:/var/atlassian/application-data/jira
-#      - shared:/var/atlassian/application-data/shared
-#      - ./scripts:/var/atlassian/application-data/shared/scripts
-#    depends_on:
-#      database:
-#        condition: service_healthy
-#    networks:
-#      - cluster
-#  node4:
-#    build:
-#      context: .
-#      dockerfile: jira.Dockerfile
-#      args:
-#        JIRA_IMAGE: ${JIRA_IMAGE}
-#    container_name: jira_node4
-#    ports:
-#      - 8084:8080
-#      - 8004:8000
-#    environment:
-#      # Setup for debugger
-#      # - JVM_SUPPORT_RECOMMENDED_ARGS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000 -Dupm.plugin.upload.enabled=true"
-#      - JVM_SUPPORT_RECOMMENDED_ARGS="-Dupm.plugin.upload.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000"
-#      # Reverse Proxy Settings
-#      - ATL_PROXY_NAME=localhost
-#      - ATL_PROXY_PORT=8080
-#      # Database
-#      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
-#      - ATL_JDBC_USER=jira
-#      - ATL_JDBC_PASSWORD=jira
-#      - ATL_DB_DRIVER=org.postgresql.Driver
-#      - ATL_DB_TYPE=postgres72
-#      # Data Center configuration
-#      - CLUSTERED=true
-#      - JIRA_NODE_ID=jira4
-#      # Home Directories
-#      - JIRA_HOME=/var/atlassian/application-data/jira
-#      - JIRA_SHARED_HOME=/var/atlassian/application-data/shared
-#    volumes:
-#      - node4:/var/atlassian/application-data/jira
-#      - shared:/var/atlassian/application-data/shared
-#      - ./scripts:/var/atlassian/application-data/shared/scripts
-#    depends_on:
-#      database:
-#        condition: service_healthy
-#    networks:
-#      - cluster
+        ipv4_address: 172.28.0.6
 volumes:
   database:
   node1:
@@ -216,8 +145,7 @@ volumes:
   shared:
 networks:
   cluster:
-    driver: bridge
     ipam:
       config:
-        - subnet: 10.5.0.0/16
-          gateway: 10.5.0.1
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
